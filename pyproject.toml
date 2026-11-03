@@ -1,0 +1,79 @@
+[project]
+name = "multimodel"
+version = "0.2.0"
+description = "Qwen3-Omni 기반 STS(음성→음성) 서버 + STT/TTS 툴킷"
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "faster-whisper>=1.1",
+    # av 19 에서 faster-whisper 가 쓰는 open(metadata_errors=...) 인자가 제거됨
+    "av>=12,<17",
+    "edge-tts>=7.0",
+    "gradio>=5.0",
+    # --- STS 서버 ---
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "python-multipart>=0.0.9",
+    "soundfile>=0.12",
+    "numpy>=1.26",
+    "supertonic>=1.3.1",
+    # Supertonic TTS 를 GPU 로 (CPU 도 그대로 됨). CPU 판 onnxruntime 과 같은 폴더에 깔려 둘 중 하나만 — 아래 override 참고.
+    # 1.27+ 는 CUDA 13 용이라 torch(cu128)와 한 프로세스에 섞인다 → CUDA 12 용 마지막 판으로 고정
+    "onnxruntime-gpu==1.26.*; python_version >= '3.11'",
+    "onnxruntime-gpu>=1.19,<1.24; python_version < '3.11'",   # 1.24+ 는 3.11 부터
+]
+
+[project.optional-dependencies]
+# Windows에 CUDA Toolkit 없이 GPU 추론을 하기 위한 런타임 DLL (faster-whisper, onnxruntime-gpu 용)
+cuda = [
+    "nvidia-cublas-cu12",
+    "nvidia-cudnn-cu12>=9,<10",
+    "onnxruntime-gpu[cuda]==1.26.*; python_version >= '3.11'",
+]
+# Qwen3-Omni 추론 (torch 는 RTX 50xx(Blackwell) 지원을 위해 CUDA 12.8 빌드 사용)
+omni = [
+    "torch>=2.7",
+    "transformers>=5.2.0",
+    "accelerate>=1.0",
+    "qwen-omni-utils>=0.0.8",
+    "compressed-tensors>=0.11",
+]
+# 기존 GlassAssist RAG(KR-SBERT + Chroma DB) 연결용
+rag = [
+    "langchain-chroma>=0.2",
+    "langchain-huggingface>=0.1",
+    "sentence-transformers>=3.0",
+]
+
+[project.scripts]
+mmt = "multimodel.cli:main"
+sts-server = "sts_server.__main__:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["multimodel", "sts_server"]
+
+[tool.uv]
+# C 드라이브 여유 공간이 작아 패키지 캐시를 D 드라이브에 둔다
+cache-dir = "D:/uv-cache"
+# supertonic·faster-whisper 가 CPU 판 onnxruntime 을 요구하지만 onnxruntime-gpu 가 같은 모듈을 준다 — CPU 판은 깔지 않는다
+override-dependencies = ["onnxruntime; sys_platform == 'never'"]
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu128" }
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
+    "matplotlib>=3.10.9",
+    "openpyxl>=3.1.5",
+    "pytest>=9.1.1",
+]
