@@ -25,7 +25,7 @@ from sts_server.config import Settings
 from sts_server.engines import Message, OmniEngine
 from sts_server.rag import Retriever
 from sts_server.text import (SentenceSplitter, clean_for_speech, cut_loop, find_loop, has_threat_word, parse_intent,
-                             parse_understand)
+                             parse_understand, speak_placeholders)
 
 log = logging.getLogger(__name__)
 
@@ -182,6 +182,8 @@ class STSPipeline:
     def _fallback_tts(self, text: str, lang: str = "ko") -> tuple[bytes, str]:
         tts = self._get_tts()
         extra = {"lang": lang} if lang != "ko" else {}   # 언어를 고를 수 있는 TTS 만 lang 을 받는다
+        if lang == "ko":
+            text = speak_placeholders(text)   # 안내방송 빈칸(00시, (열차명칭))을 소리 내기 좋게
         data = b"".join(tts.stream(text, voice=self.s.fallback_voice or None, **extra))
         return data, tts.extension.lstrip(".")
 
@@ -337,7 +339,7 @@ class STSPipeline:
             try:
                 buf = b""
                 first = True
-                for piece in tts.stream(text, voice=self.s.fallback_voice or None):
+                for piece in tts.stream(speak_placeholders(text), voice=self.s.fallback_voice or None):
                     buf += piece
                     # 첫 조각은 바로, 이후는 너무 잘게 쪼개지지 않게 모아서
                     if first or len(buf) >= 4096:

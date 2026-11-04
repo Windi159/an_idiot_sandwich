@@ -23,6 +23,23 @@ def clean_for_speech(text: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+# 안내방송 문안의 빈칸. 화면에는 원문 그대로 두고, 소리로 읽을 때만 자연스러운 말로 바꾼다.
+#   "00시 00분" → "몇 시 몇 분", "00번" → "몇 번", "○○역" → "해당 역", "(열차명칭)" → "열차명칭"
+# 바꾸지 않으면 TTS 가 "영 시 영 분", "괄호 열차명칭"처럼 읽는다.
+_ZERO_BLANK = re.compile(r"(?<![\d.,:])0{2,}(?![\d.,:])\s*")
+_CIRCLE_BLANK = re.compile(r"[○◯〇]{2,}\s*")
+# 괄호 안이 한글 두 글자 이상일 때만 빈칸으로 본다 — "(주)코레일" 같은 약어는 그대로 둔다
+_PAREN_BLANK = re.compile(r"[(（]\s*([가-힣][가-힣 /·]{0,13}[가-힣])\s*[)）]")
+
+
+def speak_placeholders(text: str) -> str:
+    """음성 합성 직전에만 쓴다 (한국어). 숫자 빈칸(00)은 '몇', 기호 빈칸(○○)은 '해당', 괄호 빈칸은 괄호만 뗀다."""
+    text = _ZERO_BLANK.sub("몇 ", text)
+    text = _CIRCLE_BLANK.sub("해당 ", text)
+    text = _PAREN_BLANK.sub(r"\1", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
 _SOFT_BREAK = re.compile(r"(.+?[,，])(?=\s)", re.S)
 
 

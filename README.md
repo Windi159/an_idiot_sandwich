@@ -56,6 +56,9 @@ uv run sts-server --model qwen3-omni-30b         # Qwen3-Omni
 \* 답변 문장 5개를 합성해 Gemma 로 다시 받아쓴 글자 일치율. Gemma 의 받아쓰기 오차가 섞여 있다. `scripts/compare_tts.py` 로 재현,
 샘플은 `outputs/tts_compare/`.
 
+- 안내방송 문안의 빈칸은 **소리 낼 때만** 바꿔 읽는다 (`sts_server/text.py`의 `speak_placeholders`, 한국어만).
+  `00시 00분` → "몇 시 몇 분", `00번` → "몇 번", `○○역` → "해당 역", `(열차명칭)` → "열차명칭". 화면에 가는 문장은 원문 그대로다.
+  바꾸지 않으면 "영 시 영 분", "괄호 열차명칭"처럼 읽힌다.
 - Supertonic 은 CPU 를 나눠 쓰면 첫 문장이 늦어져 문장을 하나씩 합성한다(`max_concurrency = 1`). 실시간의 약 10배 속도라 재생이 끊기지 않는다.
 - `/sts` 첫 음성: Supertonic **1.45s** (1.26–1.66s) vs Edge 1.35–1.48s (가끔 2s 이상) — 평균은 비슷하고 편차가 작다.
 - Qwen3-TTS(0.6B, 화자 Sohee)도 비교했지만 발음은 정확(100%)한 대신 문장당 8–10s(RTF 1.66)로 실시간이 안 돼 제외했다.
